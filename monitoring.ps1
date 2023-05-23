@@ -44,9 +44,9 @@ function LoadIniFile([string] $IniFilePath) {
     return $Ini
 }
 
-function IsCpuUsageHigh([string] $ProcName, [int32] $Threthold) {
+function IsCpuUsageHigh([string] $ProcName, [int32] $Threshold) {
     return ((Get-Counter ('\Process(' + $ProcName + '*)\% Processor Time')).CounterSamples | `
-        Where-Object { $_.CookedValue -gt $Threthold } | `
+        Where-Object { $_.CookedValue -gt $Threshold } | `
         Measure-Object).Count -gt 0
 }
 
