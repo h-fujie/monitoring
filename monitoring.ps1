@@ -104,7 +104,6 @@ function Main() {
             SendMail $Ini $Ini[$Section]['subject'] $Ini[$Section]['body']
         }
         $Results[$Section] = $IsHigh
-        $IsHigh
         WriteResultData ($Env:USERPROFILE + '\develop\monitoring\results.properties') $Results
     }
 }
