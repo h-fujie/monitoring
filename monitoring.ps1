@@ -81,7 +81,6 @@ function WriteResultData([string] $ResultFilePath, [hashtable] $Results) {
 }
 
 function SendMail([hashtable] $MailSettings, [string] $subject, [string] $body) {
-    $MailSettings['from']
     Send-MailMessage `
         -From $MailSettings['from'] `
         -To $MailSettings['to'] `
