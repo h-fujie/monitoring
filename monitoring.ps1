@@ -80,7 +80,7 @@ function WriteResultData([string] $ResultFilePath, [hashtable] $Results) {
     }
 }
 
-function SendMail([hashtable] $MailSettings, [string] $subject, [string] $body) {
+function SendMail([hashtable] $MailSettings, [string] $Subject, [string] $Body) {
     Send-MailMessage `
         -From $MailSettings['from'] `
         -To $MailSettings['to'] `
@@ -88,8 +88,8 @@ function SendMail([hashtable] $MailSettings, [string] $subject, [string] $body) 
         -Port $MailSettings['port'] `
         -UseSsl `
         -Credential (New-Object System.Management.Automation.PSCredential('[email]', (ConvertTo-SecureString '[token]' -AsPlainText -Force))) `
-        -Subject $subject `
-        -Body $body
+        -Subject $Subject `
+        -Body $Body
 }
 
 function Main() {
