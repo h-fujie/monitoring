@@ -80,12 +80,13 @@ function WriteResultData([string] $ResultFilePath, [hashtable] $Results) {
     }
 }
 
-function SendMail([hashtable] $Ini, [string] $subject, [string] $body) {
+function SendMail([hashtable] $MailSettings, [string] $subject, [string] $body) {
+    $MailSettings['from']
     Send-MailMessage `
-        -From $Ini['MailSettings']['from'] `
-        -To $Ini['MailSettings']['to'] `
-        -SmtpServer $Ini['MailSettings']['smtpServer'] `
-        -Port $Ini['MailSettings']['port'] `
+        -From $MailSettings['from'] `
+        -To $MailSettings['to'] `
+        -SmtpServer $MailSettings['smtpServer'] `
+        -Port $MailSettings['port'] `
         -UseSsl `
         -Credential (New-Object System.Management.Automation.PSCredential('[email]', (ConvertTo-SecureString '[token]' -AsPlainText -Force))) `
         -Subject $subject `
@@ -101,7 +102,7 @@ function Main() {
         }
         [boolean] $IsHigh = IsCpuUsageHigh $Ini[$Section]['process'] $Ini[$Section]['threshold']
         if ($IsHigh -and [System.Convert]::ToBoolean($Results[$Section])) {
-            SendMail $Ini $Ini[$Section]['subject'] $Ini[$Section]['body']
+            SendMail $Ini['MailSettings'] $Ini[$Section]['subject'] $Ini[$Section]['body']
         }
         $Results[$Section] = $IsHigh
     }
