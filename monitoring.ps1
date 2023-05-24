@@ -1,3 +1,8 @@
+Param (
+    [string] $IniFile = $Env:USERPROFILE + '\develop\monitoring\settings.ini',
+    [string] $ResultFile = $Env:USERPROFILE + '\develop\monitoring\results.properties'
+)
+
 function LoadIniFile([string] $IniFilePath) {
     # 改行込みのパラメータ読み込みは非対応
     if ($null -eq $IniFilePath -or $IniFilePath -eq '') {
@@ -93,19 +98,19 @@ function SendMail([hashtable] $MailSettings, [string] $Subject, [string] $Body) 
 }
 
 function Main() {
-    [hashtable] $Results = ReadResultData ($Env:USERPROFILE + '\develop\monitoring\results.properties')
-    [hashtable] $Ini = LoadIniFile ($Env:USERPROFILE + '\develop\monitoring\settings.ini')
+    [hashtable] $Results = ReadResultData $ResultFile
+    [hashtable] $Ini = LoadIniFile $IniFile
     foreach ($Section in $Ini.Keys) {
         if ($Section -eq '__NoSection__' -or $Section -eq 'MailSettings') {
             continue
         }
         [boolean] $IsHigh = IsCpuUsageHigh $Ini[$Section]['process'] $Ini[$Section]['threshold']
-        if ($IsHigh -and [System.Convert]::ToBoolean($Results[$Section])) {
+        if ($IsHigh -and $Results.Contains($Section) -and [System.Convert]::ToBoolean($Results[$Section])) {
             SendMail $Ini['MailSettings'] $Ini[$Section]['subject'] $Ini[$Section]['body']
         }
         $Results[$Section] = $IsHigh
     }
-    WriteResultData ($Env:USERPROFILE + '\develop\monitoring\results.properties') $Results
+    WriteResultData $ResultFile $Results
 }
 
 Main
