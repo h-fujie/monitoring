@@ -4,12 +4,12 @@ Param (
 )
 
 function LoadIniFile([string] $IniFilePath) {
-    # æ”¹è¡Œè¾¼ã¿ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿èª­ã¿è¾¼ã¿ã¯éžå¯¾å¿œ
+    # ‰üsž‚Ý‚Ìƒpƒ‰ƒ[ƒ^“Ç‚Ýž‚Ý‚Í”ñ‘Î‰ž
     if ($null -eq $IniFilePath -or $IniFilePath -eq '') {
-        throw 'iniãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ‘ã‚¹ãŒæŒ‡å®šã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚'
+        throw 'iniƒtƒ@ƒCƒ‹‚ÌƒpƒX‚ªŽw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB'
     }
     if (-not (Test-Path $IniFilePath)) {
-        throw ('iniãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚ IniFilePath: ' + $IniFilePath)
+        throw ('iniƒtƒ@ƒCƒ‹‚ª‘¶Ý‚µ‚Ü‚¹‚ñB IniFilePath: ' + $IniFilePath)
     }
     $Ini = [ordered] @{}
     $Ini['__NoSection__'] = @{}
@@ -17,7 +17,7 @@ function LoadIniFile([string] $IniFilePath) {
         '^\s*\[([^\]]+)\]\s*$' {
             $Section = $Matches[1]
             if ($Ini.Contains($Section)) {
-                throw ('ã‚»ã‚¯ã‚·ãƒ§ãƒ³ãŒé‡è¤‡ã—ã¦ã„ã¾ã™ã€‚ Section: ' + $Section)
+                throw ('ƒZƒNƒVƒ‡ƒ“‚ªd•¡‚µ‚Ä‚¢‚Ü‚·B Section: ' + $Section)
             }
             $Ini[$Section] = @{}
             continue
@@ -37,22 +37,29 @@ function LoadIniFile([string] $IniFilePath) {
                 $Section = '__NoSection__'
             }
             if ($Ini[$Section].Contains($Key)) {
-                throw ('ã‚­ãƒ¼ãŒé‡è¤‡ã—ã¦ã„ã¾ã™ã€‚ Section: ' + $Section + ', Key: ' + $Key)
+                throw ('ƒL[‚ªd•¡‚µ‚Ä‚¢‚Ü‚·B Section: ' + $Section + ', Key: ' + $Key)
             }
             $Ini[$Section][$Key] = $Value
             continue
         }
         default {
-            throw ('è§£æžä¸èƒ½ã§ã™ã€‚')
+            throw ('‰ðÍ•s”\‚Å‚·B')
         }
     }
     return $Ini
 }
 
-function IsCpuUsageHigh([string] $ProcName, [int32] $Threshold) {
-    return ((Get-Counter ('\Process(' + $ProcName + '*)\% Processor Time')).CounterSamples | `
-        Where-Object { $_.CookedValue -gt $Threshold } | `
-        Measure-Object).Count -gt 0
+function IsCpuProcessUsageHigh([string] $ProcName, [int32] $Threshold) {
+    $Processes = ((Get-Counter -Counter '\Process(_total)\% Processor Time', ('\Process(' + $ProcName + '*)\% Processor Time')).CounterSamples | `
+        Select-Object @{ label = "Process"; expression = { $_.Path -replace ('^.*\((_total|' + $ProcName + ')(#\d+)?\).*$'), '$1' }}, CookedValue)
+    $Total = ($Processes | Where-Object { $_.Process -eq '_total' })[0].CookedValue
+    $Usage = ($Processes | Where-Object { $_.Process -eq $ProcName } | Measure-Object -Property CookedValue -Sum).Sum
+    return ($Usage * 100) / $Total -gt $Threshold
+}
+
+function IsCpuUsageHigh([int32] $Threshold) {
+    return ((Get-Counter -Counter '\Processor(_total)\% Processor Time').CounterSamples | `
+        Select-Object CookedValue)[0].CookedValue -gt $Threshold
 }
 
 function ReadResultData([string] $ResultFilePath) {
@@ -63,13 +70,13 @@ function ReadResultData([string] $ResultFilePath) {
                 $Key = $Matches[1].Trim()
                 $Value = $Matches[2].Trim()
                 if ($Results.Contains($Key)) {
-                    throw ('ã‚­ãƒ¼ãŒé‡è¤‡ã—ã¦ã„ã¾ã™ã€‚ Key: ' + $Key)
+                    throw ('ƒL[‚ªd•¡‚µ‚Ä‚¢‚Ü‚·B Key: ' + $Key)
                 }
                 $Results[$Key] = $Value
                 continue
             }
             default {
-                throw ('è§£æžä¸èƒ½ã§ã™ã€‚')
+                throw ('‰ðÍ•s”\‚Å‚·B')
             }
         }
     }
@@ -81,7 +88,7 @@ function WriteResultData([string] $ResultFilePath, [hashtable] $Results) {
         Clear-Content $ResultFilePath
     }
     foreach ($Key in $Results.Keys) {
-        ($Key + '=' + $Results[$Key]) > $ResultFilePath
+        ($Key + '=' + $Results[$Key]) >> $ResultFilePath
     }
 }
 
@@ -104,7 +111,12 @@ function Main() {
         if ($Section -eq '__NoSection__' -or $Section -eq 'MailSettings') {
             continue
         }
-        [boolean] $IsHigh = IsCpuUsageHigh $Ini[$Section]['process'] $Ini[$Section]['threshold']
+        [boolean] $IsHigh = $false
+        if ($Ini[$Section].Contains('process')) {
+            $IsHigh = IsCpuProcessUsageHigh $Ini[$Section]['process'] $Ini[$Section]['threshold']
+        } else {
+            $IsHigh = IsCpuUsageHigh $Ini[$Section]['threshold']
+        }
         if ($IsHigh -and $Results.Contains($Section) -and [System.Convert]::ToBoolean($Results[$Section])) {
             SendMail $Ini['MailSettings'] $Ini[$Section]['subject'] $Ini[$Section]['body']
         }
