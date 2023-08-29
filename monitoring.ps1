@@ -1,6 +1,6 @@
 Param (
-    [string] $IniFile = $Env:USERPROFILE + '\develop\monitoring\settings.ini',
-    [string] $ResultFile = $Env:USERPROFILE + '\develop\monitoring\results.properties'
+    [string] $IniFile = $Env:USERPROFILE + '\monitoring\settings.ini',
+    [string] $ResultFile = $Env:USERPROFILE + '\monitoring\results.properties'
 )
 
 function LoadIniFile([string] $IniFilePath) {
